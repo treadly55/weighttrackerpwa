@@ -1,0 +1,7 @@
+node_modules/
+.netlify/
+.env
+
+# Local planning notes
+plans.md
+weight-tracker-build-plan.md
