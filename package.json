@@ -4,6 +4,9 @@
   "private": true,
   "description": "Two-player weight tracker PWA on Netlify",
   "type": "module",
+  "scripts": {
+    "test": "node --test tests/dates.test.mjs"
+  },
   "dependencies": {
     "@netlify/blobs": "^11.1.0",
     "web-push": "^3.6.7"
