@@ -4,4 +4,4 @@
 
 # 09:00 UTC = 7pm Sydney AEST, 8pm during daylight saving
 [functions."remind"]
-  schedule = "40 10 * * *"
+  schedule = "0 9 * * *"
