@@ -1,14 +1,220 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Weight Tracker</title>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2a37">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weight">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<title>Weight Tracker</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #fff;
+    --ink: #1f2a37;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #1f2a37;
+    --ok: #15803d;
+    --ok-bg: #dcfce7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .name { font-weight: 600; }
+  .you { color: var(--muted); font-weight: 400; font-size: .8rem; }
+  .pill { font-size: .8rem; padding: 3px 10px; border-radius: 999px; background: #f3f4f6; color: var(--muted); white-space: nowrap; }
+  .pill.done { background: var(--ok-bg); color: var(--ok); }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  .entry { display: flex; gap: 8px; }
+  input[type=number] { flex: 1; min-width: 0; font-size: 1.25rem; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); }
+  button { font: inherit; font-weight: 600; padding: 12px 18px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .msg { margin-top: 10px; font-size: .9rem; min-height: 1.2em; }
+  .msg.ok { color: var(--ok); }
+  .msg.err { color: #b91c1c; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+  .hist { list-style: none; margin: 0; padding: 0; }
+  .hist li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .hist li:last-child { border-bottom: 0; }
+  .hist .d { color: var(--muted); }
+  .link { background: none; border: 0; padding: 0; color: var(--muted); font-size: .85rem; font-weight: 400; text-decoration: underline; cursor: pointer; }
+  .pick { display: grid; gap: 10px; }
+  .pick button { padding: 18px; font-size: 1.05rem; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111827; --card: #1b2432; --ink: #f3f4f6; --muted: #9ca3af; --line: #2f3a4a; --accent: #3b82f6; --ok: #86efac; --ok-bg: #14432a; }
+    .pill { background: #263141; }
+    input[type=number] { background: #111827; }
+  }
+</style>
 </head>
 <body>
-  <h1>Weight Tracker — coming soon</h1>
+<main>
+  <section id="picker" hidden>
+    <h1>Weight Tracker</h1>
+    <p class="sub">Who are you?</p>
+    <div class="pick">
+      <button type="button" data-pick="player1">Player 1</button>
+      <button type="button" data-pick="player2">Player 2</button>
+    </div>
+  </section>
+
+  <section id="app" hidden>
+    <header>
+      <h1>Weight Tracker</h1>
+      <button type="button" id="switch" class="link">Switch player</button>
+    </header>
+    <p class="sub" id="sub"></p>
+
+    <div class="card" id="statusCard">
+      <div class="row"><span class="name" id="n1">Player 1</span><span class="pill" id="s1">…</span></div>
+      <div class="row"><span class="name" id="n2">Player 2</span><span class="pill" id="s2">…</span></div>
+    </div>
+
+    <div class="card">
+      <label for="weight">Today's weight (kg)</label>
+      <div class="entry">
+        <input id="weight" type="number" inputmode="decimal" step="0.1" min="20" max="400" placeholder="0.0">
+        <button type="button" id="log">Log</button>
+      </div>
+      <p class="msg" id="msg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Last 14 days</h2>
+      <ul class="hist" id="hist"></ul>
+    </div>
+  </section>
+</main>
+
+<script>
+const DISPLAY_NAMES = { player1: 'Player 1', player2: 'Player 2' };
+const DEADLINE_HOUR = 21;
+const KEY = 'wt.player';
+
+const $ = (id) => document.getElementById(id);
+const api = (path, opts) => fetch('/.netlify/functions/' + path, opts);
+
+let me = localStorage.getItem(KEY);
+let other = null;
+
+function deadlineText() {
+  const h = DEADLINE_HOUR % 12 || 12;
+  return `Due by ${h}${DEADLINE_HOUR < 12 ? 'am' : 'pm'}`;
+}
+
+function show() {
+  $('picker').hidden = !!me;
+  $('app').hidden = !me;
+  if (!me) return;
+  other = me === 'player1' ? 'player2' : 'player1';
+  $('sub').textContent = `You're ${DISPLAY_NAMES[me]} · ${deadlineText()}`;
+  refresh();
+}
+
+function setPlayer(p) {
+  me = p;
+  localStorage.setItem(KEY, p);
+  $('msg').textContent = '';
+  show();
+}
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(undefined, {
+    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+  });
+}
+
+function renderStatus(data) {
+  for (const [i, user] of ['player1', 'player2'].entries()) {
+    const info = data[user];
+    $('n' + (i + 1)).innerHTML = DISPLAY_NAMES[user] + (user === me ? ' <span class="you">(you)</span>' : '');
+    const pill = $('s' + (i + 1));
+    pill.textContent = info.loggedToday ? `${info.latestToday.weight} kg` : 'Not logged yet';
+    pill.classList.toggle('done', info.loggedToday);
+  }
+  const hist = data[me].history;
+  $('hist').innerHTML = hist.length
+    ? hist.map((r) => `<li><span class="d">${fmtDate(r.date)}</span><span>${r.weight} kg</span></li>`).join('')
+    : '<li><span class="d">No entries yet</span></li>';
+}
+
+async function refresh() {
+  try {
+    const res = await api('status');
+    if (!res.ok) throw new Error();
+    renderStatus(await res.json());
+  } catch {
+    $('msg').textContent = "Couldn't load status. Check your connection.";
+    $('msg').className = 'msg err';
+  }
+}
+
+async function logWeight() {
+  const weight = parseFloat($('weight').value);
+  const msg = $('msg');
+  if (!Number.isFinite(weight)) {
+    msg.textContent = 'Enter a weight first.';
+    msg.className = 'msg err';
+    return;
+  }
+  $('log').disabled = true;
+  msg.textContent = 'Saving…';
+  msg.className = 'msg';
+  try {
+    const res = await api('entry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: me, weight }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    msg.textContent = `Logged ${data.weight} kg. Nice one!`;
+    msg.className = 'msg ok';
+    $('weight').value = '';
+    await refresh();
+  } catch (err) {
+    msg.textContent = err.message || "Couldn't save. Try again.";
+    msg.className = 'msg err';
+  } finally {
+    $('log').disabled = false;
+  }
+}
+
+document.querySelectorAll('[data-pick]').forEach((b) =>
+  b.addEventListener('click', () => setPlayer(b.dataset.pick))
+);
+$('switch').addEventListener('click', () => {
+  me = null;
+  localStorage.removeItem(KEY);
+  show();
+});
+$('log').addEventListener('click', logWeight);
+$('weight').addEventListener('keydown', (e) => { if (e.key === 'Enter') logWeight(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && me) refresh(); });
+
+show();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
 </body>
 </html>

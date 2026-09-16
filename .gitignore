@@ -1,6 +1,7 @@
 node_modules/
 .netlify/
 .env
+deno.lock
 
 # Local planning notes
 plans.md
