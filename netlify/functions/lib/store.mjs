@@ -10,6 +10,24 @@ export async function appendEntry(user, date, record) {
   return key;
 }
 
+const subKey = (user, hash) => `subs/${user}/${hash}.json`;
+
+// One blob per endpoint, so re-subscribing replaces the same sub
+export async function saveSub(user, hash, subscription) {
+  await store().setJSON(subKey(user, hash), { user, subscription, updated: new Date().toISOString() });
+}
+
+export async function listSubs(user) {
+  const s = store();
+  const { blobs } = await s.list({ prefix: `subs/${user}/` });
+  const records = await Promise.all(blobs.map(({ key }) => s.get(key, { type: 'json' })));
+  return blobs.map(({ key }, i) => ({ key, ...records[i] })).filter((r) => r.subscription);
+}
+
+export async function deleteSubByKey(key) {
+  await store().delete(key);
+}
+
 // Latest entry per date for a user, as { 'YYYY-MM-DD': record }
 export async function latestPerDay(user) {
   const s = store();

@@ -96,6 +96,11 @@
       <p class="msg" id="msg"></p>
     </div>
 
+    <div class="card" id="notifyCard" hidden>
+      <button type="button" id="enable">Enable notifications</button>
+      <p class="msg" id="notifyMsg"></p>
+    </div>
+
     <div class="card">
       <h2>Last 14 days</h2>
       <ul class="hist" id="hist"></ul>
@@ -126,6 +131,9 @@ function show() {
   other = me === 'player1' ? 'player2' : 'player1';
   $('sub').textContent = `You're ${DISPLAY_NAMES[me]} · ${deadlineText()}`;
   refresh();
+  updateNotifyUI();
+  // Keep the stored subscription pointed at the current player
+  if (pushSupported() && Notification.permission === 'granted') subscribeToPush().catch(() => {});
 }
 
 function setPlayer(p) {
@@ -198,6 +206,83 @@ async function logWeight() {
   }
 }
 
+// --- notifications ---
+const pushSupported = () => 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+
+function urlBase64ToUint8Array(base64) {
+  const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(padded);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+async function subscribeToPush() {
+  const reg = await navigator.serviceWorker.ready;
+  const res = await api('subscribe');
+  const { publicKey } = await res.json();
+  if (!publicKey) throw new Error('Server is missing its notification key.');
+
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    const opts = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) };
+    try {
+      sub = await reg.pushManager.subscribe(opts);
+    } catch {
+      // Stale subscription from an older key
+      const old = await reg.pushManager.getSubscription();
+      if (old) await old.unsubscribe();
+      sub = await reg.pushManager.subscribe(opts);
+    }
+  }
+
+  const saved = await api('subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user: me, subscription: sub.toJSON() }),
+  });
+  if (!saved.ok) throw new Error('Couldn’t save your subscription.');
+}
+
+function updateNotifyUI() {
+  const card = $('notifyCard');
+  const msg = $('notifyMsg');
+  if (!me) return;
+  if (!pushSupported()) {
+    // iOS only exposes push once the app is on the home screen
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent);
+    card.hidden = !ios;
+    $('enable').hidden = true;
+    msg.textContent = ios ? 'Add this app to your home screen to turn on notifications.' : '';
+    msg.className = 'msg';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  $('enable').hidden = Notification.permission === 'denied';
+  if (Notification.permission === 'denied') {
+    msg.textContent = 'Notifications are blocked. Turn them on in Settings > Notifications > Weight.';
+    msg.className = 'msg err';
+  }
+}
+
+async function enableNotifications() {
+  const msg = $('notifyMsg');
+  msg.textContent = '';
+  msg.className = 'msg';
+  try {
+    // Must run inside the tap handler on iOS
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return updateNotifyUI();
+    await subscribeToPush();
+    updateNotifyUI();
+  } catch (err) {
+    msg.textContent = err.message || 'Could not turn on notifications.';
+    msg.className = 'msg err';
+  }
+}
+
 document.querySelectorAll('[data-pick]').forEach((b) =>
   b.addEventListener('click', () => setPlayer(b.dataset.pick))
 );
@@ -207,6 +292,7 @@ $('switch').addEventListener('click', () => {
   show();
 });
 $('log').addEventListener('click', logWeight);
+$('enable').addEventListener('click', enableNotifications);
 $('weight').addEventListener('keydown', (e) => { if (e.key === 'Enter') logWeight(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && me) refresh(); });
 
