@@ -1,3 +1,7 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+
+# 09:00 UTC = 7pm Sydney AEST, 8pm during daylight saving
+[functions."remind"]
+  schedule = "0 9 * * *"

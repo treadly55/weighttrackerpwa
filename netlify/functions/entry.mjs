@@ -1,6 +1,7 @@
-import { USERS, MIN_WEIGHT, MAX_WEIGHT } from './lib/config.mjs';
+import { USERS, DISPLAY_NAMES, MIN_WEIGHT, MAX_WEIGHT } from './lib/config.mjs';
 import { todayInSydney } from './lib/dates.mjs';
 import { appendEntry } from './lib/store.mjs';
+import { sendPush } from './lib/push.mjs';
 
 const json = (body, status = 200) => Response.json(body, { status });
 
@@ -24,7 +25,17 @@ export default async (req) => {
   const record = { user, weight, date: todayInSydney(now), timestamp: now.toISOString() };
   await appendEntry(user, record.date, record);
 
-  // TODO(Stage 5): send confirmation push to the other player
+  // Tell the other player, but never fail the entry over it
+  const other = USERS.find((u) => u !== user);
+  try {
+    await sendPush(other, {
+      title: 'Weight Tracker',
+      body: `${DISPLAY_NAMES[user]} logged ${weight} kg`,
+      tag: 'logged',
+    });
+  } catch (err) {
+    console.error('confirmation push failed', err);
+  }
 
   return json(record);
 };
