@@ -57,7 +57,7 @@ subs/<player>/<endpoint-hash>.json               { user, subscription, updated }
 
 **Storage is append-only, by design.** Every entry is its own blob under a unique timestamp. A second entry the same day does not replace the first — both are kept, and reads take the latest. The app never overwrites or deletes an entry. The one exception is subscriptions, which are replaced per endpoint and deleted when a push service reports them expired.
 
-Consequence worth knowing: a mistyped weight can't be corrected or removed through the app. Logging the right value again supersedes it in the UI, but the wrong one stays in storage.
+**Corrections work by appending.** Once a player has logged today, the button reads **Update** and a new number supersedes the earlier one. Nothing is edited in place; the wrong value stays in storage and the latest wins everywhere the app reads.
 
 ## Things that are easy to get wrong
 
@@ -92,6 +92,12 @@ When a push service returns 404 or 410, `sendPush` deletes that subscription blo
 
 Switching players in the UI leaves the old subscription blob under the old player name, so one device can be subscribed under both names and receive notifications meant for either player. **This is accepted.** People do switch players, and an occasional extra notification is fine for a hobby app. It clears itself once that endpoint expires.
 
+### Only the first entry of the day notifies
+
+`entry.mjs` checks whether the player already has an entry for today before saving. If so, the new entry is a correction: stored as normal, but no push is sent, and the response carries `correction: true` so the page can say "Updated". The other player gets exactly one notification per player per day.
+
+The trade-off: a notification shows the *first* number. If someone logs 28.4 and corrects it to 82.4, the other player's banner says 28.4 while the app shows 82.4.
+
 ### Push failures never fail a log
 
 `entry.mjs` wraps its push in try/catch and logs errors. A push outage must not lose someone's weight entry.
@@ -119,7 +125,7 @@ Secrets live only in Netlify environment variables. `.env` is gitignored and has
 - **Stray notifications during the build were testing, not bugs.** Both phones got a push at 8:50pm Sydney on 16 September, around the temporary reminder cron and the confirmation-push tests. The real 7pm reminder has since fired correctly.
 - **The icon is generated, not designed.** `make-icons.mjs` wrote the PNGs pixel by pixel via zlib, because there was no artwork and no image library. To replace it, drop new PNGs into `public/icons/` at 192, 512 and 180 pixels.
 - **An empty file named `2`** exists in two commits in history, created by a malformed shell redirect and removed immediately. Harmless, left alone rather than rewriting history.
-- **The service worker caches only the shell** (page, manifest, icon) and always goes to the network for function calls, so status data is never stale. Bump `CACHE` in `sw.js` when shell files change.
+- **The service worker caches only the shell** (page, manifest, icon) and always goes to the network for function calls, so status data is never stale. The shell is served cache-first, so **bump `CACHE` in `sw.js` whenever `index.html` changes**, or installed apps keep showing the old page. Even then, the new version appears on the second open, not the first.
 - **`DEADLINE_HOUR = 21`** is display text only ("Due by 9pm"). Nothing enforces it, and it's deliberately later than the 7pm reminder.
 
 ## If you extend it

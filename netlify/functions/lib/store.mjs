@@ -10,6 +10,11 @@ export async function appendEntry(user, date, record) {
   return key;
 }
 
+export async function hasEntryOn(user, date) {
+  const { blobs } = await store().list({ prefix: `entries/${user}/${date}/` });
+  return blobs.length > 0;
+}
+
 const subKey = (user, hash) => `subs/${user}/${hash}.json`;
 
 // One blob per endpoint, so re-subscribing replaces the same sub

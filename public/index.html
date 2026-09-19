@@ -88,7 +88,7 @@
     </div>
 
     <div class="card">
-      <label for="weight">Today's weight (kg)</label>
+      <label for="weight" id="weightLabel">Today's weight (kg)</label>
       <div class="entry">
         <input id="weight" type="number" inputmode="decimal" step="0.1" min="20" max="400" placeholder="0.0">
         <button type="button" id="log">Log</button>
@@ -158,7 +158,14 @@ function renderStatus(data) {
     pill.textContent = info.loggedToday ? `${info.latestToday.weight} kg` : 'Not logged yet';
     pill.classList.toggle('done', info.loggedToday);
   }
-  const hist = data[me].history;
+  // Once logged today, the button corrects today's weight instead
+  const mine = data[me];
+  $('log').textContent = mine.loggedToday ? 'Update' : 'Log';
+  $('weightLabel').textContent = mine.loggedToday
+    ? `Today: ${mine.latestToday.weight} kg. Enter a new number to correct it.`
+    : "Today's weight (kg)";
+
+  const hist = mine.history;
   $('hist').innerHTML = hist.length
     ? hist.map((r) => `<li><span class="d">${fmtDate(r.date)}</span><span>${r.weight} kg</span></li>`).join('')
     : '<li><span class="d">No entries yet</span></li>';
@@ -194,7 +201,7 @@ async function logWeight() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong');
-    msg.textContent = `Logged ${data.weight} kg. Nice one!`;
+    msg.textContent = data.correction ? `Updated to ${data.weight} kg.` : `Logged ${data.weight} kg. Nice one!`;
     msg.className = 'msg ok';
     $('weight').value = '';
     await refresh();

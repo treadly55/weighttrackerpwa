@@ -1,6 +1,6 @@
 import { USERS, DISPLAY_NAMES, MIN_WEIGHT, MAX_WEIGHT } from './lib/config.mjs';
 import { todayInSydney } from './lib/dates.mjs';
-import { appendEntry } from './lib/store.mjs';
+import { appendEntry, hasEntryOn } from './lib/store.mjs';
 import { sendPush } from './lib/push.mjs';
 
 const json = (body, status = 200) => Response.json(body, { status });
@@ -23,19 +23,23 @@ export default async (req) => {
 
   const now = new Date();
   const record = { user, weight, date: todayInSydney(now), timestamp: now.toISOString() };
+  // A later entry the same day is a correction: saved, but no push
+  const isCorrection = await hasEntryOn(user, record.date);
   await appendEntry(user, record.date, record);
 
   // Tell the other player, but never fail the entry over it
-  const other = USERS.find((u) => u !== user);
-  try {
-    await sendPush(other, {
-      title: 'Weight Tracker',
-      body: `${DISPLAY_NAMES[user]} logged ${weight} kg`,
-      tag: 'logged',
-    });
-  } catch (err) {
-    console.error('confirmation push failed', err);
+  if (!isCorrection) {
+    const other = USERS.find((u) => u !== user);
+    try {
+      await sendPush(other, {
+        title: 'Weight Tracker',
+        body: `${DISPLAY_NAMES[user]} logged ${weight} kg`,
+        tag: 'logged',
+      });
+    } catch (err) {
+      console.error('confirmation push failed', err);
+    }
   }
 
-  return json(record);
+  return json({ ...record, correction: isCorrection });
 };

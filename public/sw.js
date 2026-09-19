@@ -1,4 +1,4 @@
-const CACHE = 'wt-shell-v2';
+const CACHE = 'wt-shell-v3';
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
